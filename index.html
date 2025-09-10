@@ -74,7 +74,7 @@
                         <option value="random">Ngẫu nhiên</option>
                     </select>
                 </div>
-                 <!-- Numbering Mode -->
+                  <!-- Numbering Mode -->
                 <div class="mb-6">
                     <label for="numbering-mode" class="block text-sm font-medium text-gray-700 mb-2">Chế độ hiển thị STT</label>
                     <select id="numbering-mode" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
@@ -85,11 +85,11 @@
                 
                 <!-- Subject selection for smart arrangement -->
                 <div id="subject-criteria-container" class="mb-6">
-                     <label class="block text-sm font-medium text-gray-700 mb-2">Tiêu chí cho Sắp xếp thông minh</label>
-                     <div id="subject-checkboxes" class="grid grid-cols-2 gap-2 p-3 border rounded-lg bg-gray-50">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Tiêu chí cho Sắp xếp thông minh</label>
+                    <div id="subject-checkboxes" class="grid grid-cols-2 gap-2 p-3 border rounded-lg bg-gray-50">
                         <!-- Checkboxes will be dynamically inserted here -->
                         <p class="col-span-2 text-sm text-gray-500">Tải lên danh sách lớp để chọn môn.</p>
-                     </div>
+                    </div>
                 </div>
 
                 <!-- Step 3: Arrange -->
@@ -103,7 +103,7 @@
 
                 <!-- Other Actions -->
                 <div>
-                     <h3 class="text-lg font-semibold text-gray-700 mb-4">Chức năng khác</h3>
+                    <h3 class="text-lg font-semibold text-gray-700 mb-4">Chức năng khác</h3>
                     <button id="export-pdf-btn" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition duration-300 mb-3 disabled:bg-gray-400 disabled:cursor-not-allowed">
                         Xuất ra PDF/Ảnh
                     </button>
@@ -122,8 +122,10 @@
             </aside>
         </div>
     </div>
-
+    
     <script>
+        // --- Custom Alert Function has been removed as requested. ---
+        
         document.addEventListener('DOMContentLoaded', () => {
             const fileUpload = document.getElementById('file-upload');
             const criteriaSelect = document.getElementById('criteria');
@@ -303,21 +305,21 @@
                     const ignoredHeaders = ['kq rèn luyện', 'danh hiệu', 'số ngày/ buổi nghỉ', 'trạng thái lên lớp'];
 
                     headerRow.forEach((header, index) => {
-                         const headerText = String(header).trim().toLowerCase();
-                         if (index >= 5 && header && !ignoredHeaders.includes(headerText)) { 
-                           const cellValue = firstStudentRow[index] ? String(firstStudentRow[index]).trim().toLowerCase() : '';
-                           const numericScore = parseFloat(cellValue.replace(',', '.'));
-                           if (!isNaN(numericScore) || cellValue === 'đ') {
-                               detectedSubjects.push({ name: String(header), index: index });
+                           const headerText = String(header).trim().toLowerCase();
+                           if (index >= 5 && header && !ignoredHeaders.includes(headerText)) { 
+                            const cellValue = firstStudentRow[index] ? String(firstStudentRow[index]).trim().toLowerCase() : '';
+                            const numericScore = parseFloat(cellValue.replace(',', '.'));
+                            if (!isNaN(numericScore) || cellValue === 'đ') {
+                                detectedSubjects.push({ name: String(header), index: index });
+                            }
                            }
-                        }
-                        if (headerText.includes('giới')) {
-                            genderIndex = index;
-                        }
+                           if (headerText.includes('giới')) {
+                               genderIndex = index;
+                           }
                     });
 
                     if(detectedSubjects.length === 0) {
-                        alert('Không thể nhận diện các môn học. Vui lòng kiểm tra lại định dạng tệp.');
+                        console.error('Không thể nhận diện các môn học. Vui lòng kiểm tra lại định dạng tệp.');
                         return;
                     }
 
@@ -358,7 +360,7 @@
                     }).filter(student => student !== null);
 
                     if (students.length === 0) {
-                        alert('Không tìm thấy dữ liệu học sinh hợp lệ.');
+                        console.error('Không tìm thấy dữ liệu học sinh hợp lệ.');
                         return;
                     }
                     
@@ -366,8 +368,8 @@
                     arrangeBtn.disabled = false;
                     clearBtn.disabled = false;
                 } catch (error) {
-                    alert('Đã xảy ra lỗi khi xử lý tệp.');
-                    console.error(error);
+                    console.error('Đã xảy ra lỗi khi xử lý tệp.', error);
+                    return;
                 }
             }
 
@@ -413,17 +415,31 @@
             numberingModeSelect.addEventListener('change', updateSeatNumberDisplay);
             
             arrangeBtn.addEventListener('click', () => {
-                if (students.length === 0) return alert('Vui lòng tải lên danh sách lớp trước.');
+                if (students.length === 0) {
+                    console.error('Vui lòng tải lên danh sách lớp trước.');
+                    return;
+                }
                 
                 const criteria = criteriaSelect.value;
                 let arrangedStudents = [...students];
+                let seatOrder = [];
 
                 if (criteria === 'random') {
-                    populateClassroomRandomly(arrangedStudents);
-                } else { 
+                    // Xáo trộn danh sách học sinh
+                    for (let i = arrangedStudents.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [arrangedStudents[i], arrangedStudents[j]] = [arrangedStudents[j], arrangedStudents[i]];
+                    }
+                    // Sắp xếp theo thứ tự mặc định của sơ đồ
+                    seatOrder = Array.from(document.querySelectorAll('.seat')).map(s => parseInt(s.dataset.seatId));
+                } else { // Sắp xếp thông minh
                     const selectedSubjects = Array.from(subjectCheckboxesDiv.querySelectorAll('input:checked')).map(cb => cb.value);
-                    if (selectedSubjects.length === 0) return alert('Vui lòng chọn ít nhất một môn học để sắp xếp thông minh.');
+                    if (selectedSubjects.length === 0) {
+                        console.error('Vui lòng chọn ít nhất một môn học để sắp xếp thông minh.');
+                        return;
+                    }
 
+                    // Tính điểm trung bình cho mỗi học sinh
                     arrangedStudents.forEach(student => {
                         let sum = 0;
                         let count = 0;
@@ -436,138 +452,109 @@
                         student.keyScore = count > 0 ? sum / count : 0;
                     });
                     
+                    // Sắp xếp học sinh theo điểm trung bình giảm dần
                     arrangedStudents.sort((a, b) => b.keyScore - a.keyScore);
                     
-                    const arrangementMap = customOrderArrangement(arrangedStudents);
-                    populateClassroomFromMap(arrangementMap);
+                    // Lấy thứ tự chỗ ngồi tùy chỉnh của bạn
+                    seatOrder = getCustomOrderedSeatIds();
                 }
+                
+                // Điền học sinh vào sơ đồ lớp học theo thứ tự đã xác định
+                populateClassroom(arrangedStudents, seatOrder);
                 
                 exportPdfBtn.disabled = false;
             });
 
-            function customOrderArrangement(sortedStudents) {
-                const finalArrangementMap = {};
-                
-                const seatIdMap = {};
-                for(let r=0; r<10; r++) {
-                    for(let c=0; c<4; c++) {
-                        const seatNum = r*4 + c + 1;
-                        const main_col = Math.floor(c/2);
-                        const side = c % 2;
-                        const seatId = main_col * 20 + r * 2 + side;
-                        seatIdMap[seatNum] = seatId;
-                    }
+            // Hàm tạo thứ tự chỗ ngồi tùy chỉnh dựa trên yêu cầu của bạn
+            function getCustomOrderedSeatIds() {
+                // Tạo một bản đồ ngược từ số nhóm.số ghế sang seatId
+                const groupNumberToSeatId = {};
+                for (const seatId in seatIdToGroupNumber) {
+                    groupNumberToSeatId[seatIdToGroupNumber[seatId]] = parseInt(seatId);
                 }
 
-                const customSeatNumbers = [
-                    1, 2, 3, 4, 13, 14, 15, 16, 25, 26, 27, 28, 37, 38, 39, 40,
-                    5, 6, 7, 8, 17, 18, 19, 20, 29, 30, 31, 32, 9, 10, 11, 12,
-                    21, 22, 23, 24, 33, 34, 35, 36
+                // Thứ tự nhóm.số ghế tùy chỉnh của bạn
+                const customGroupSeatOrder = [
+                    '4.6', '5.6', '6.8', '1.6', '2.6', '3.8', '3.1', '2.1', '1.1', '6.1', '5.1', '4.1',
+                    '4.5', '5.5', '6.7', '1.5', '2.5', '3.7', '3.2', '2.2', '1.2', '6.2', '5.2', '4.2',
+                    '4.4', '5.4', '6.6', '1.4', '2.4', '3.6', '3.3', '2.3', '1.3', '6.3', '5.3', '4.3',
+                    '4.1', '5.1', '6.1', '1.1', '2.1', '3.1', '3.4', '2.4', '1.4', '6.4', '5.4', '4.4'
                 ];
+                
+                // Lọc bỏ các giá trị trùng lặp và chuyển đổi sang seatId
+                const uniqueGroupSeatOrder = [...new Set(customGroupSeatOrder)];
+                let seatIdList = uniqueGroupSeatOrder.map(groupSeat => groupNumberToSeatId[groupSeat]).filter(id => id !== undefined);
 
-                const customSeatOrder = customSeatNumbers.map(num => seatIdMap[num]);
-
-                sortedStudents.forEach((student, index) => {
-                    if (index < customSeatOrder.length) {
-                        const seatId = customSeatOrder[index];
-                        finalArrangementMap[seatId] = student;
-                    }
-                });
-
-                return finalArrangementMap;
+                // Thêm các ghế còn lại chưa được liệt kê
+                const allSeats = Array.from(document.querySelectorAll('.seat')).map(s => parseInt(s.dataset.seatId));
+                const remainingSeats = allSeats.filter(seatId => !seatIdList.includes(seatId)).sort((a, b) => a - b);
+                
+                return [...seatIdList, ...remainingSeats];
             }
 
-            function populateClassroomFromMap(arrangementMap) {
+            function populateClassroom(arrangedList, seatOrder) {
                 initializeClassroom(); 
                 
-                for(const seatId in arrangementMap) {
-                    const student = arrangementMap[seatId];
+                const arrangementMap = {};
+                for (let i = 0; i < arrangedList.length && i < seatOrder.length; i++) {
+                    const student = arrangedList[i];
+                    const seatId = seatOrder[i];
                     const seat = document.querySelector(`.seat[data-seat-id='${seatId}']`);
                     if (seat) {
                         const studentNameSpan = seat.querySelector('.student-name');
                         studentNameSpan.textContent = student.name;
-                        seat.title = `${student.fullName}\nĐiểm TB: ${student.keyScore.toFixed(2)}`;
+                        seat.title = `${student.fullName}${student.keyScore !== undefined ? '\nĐiểm TB: ' + student.keyScore.toFixed(2) : ''}`;
                         seat.classList.remove('text-gray-500');
                         seat.classList.add('text-black', 'cursor-grab');
                         seat.draggable = true;
                         addDragListenersToStudent(seat);
+                        arrangementMap[seat.dataset.seatId] = student;
                     }
                 }
                 updateStudentListByGroup(arrangementMap);
             }
-
-            function populateClassroomRandomly(arrangedList) {
-                initializeClassroom();
-                
-                const allSeats = document.querySelectorAll('.seat');
-                arrangedList.forEach((student, index) => {
-                    if (index < allSeats.length) {
-                        const seat = allSeats[index];
-                        if (seat) {
-                            const studentNameSpan = seat.querySelector('.student-name');
-                            studentNameSpan.textContent = student.name;
-                            seat.title = `${student.fullName}`;
-                            seat.classList.remove('text-gray-500');
-                            seat.classList.add('text-black', 'cursor-grab');
-                            seat.draggable = true;
-                            addDragListenersToStudent(seat);
-                        }
-                    }
-                });
-                
-                const arrangementMap = {};
-                document.querySelectorAll('.seat').forEach(seat => {
-                    const studentNameSpan = seat.querySelector('.student-name');
-                    const studentName = studentNameSpan.textContent;
-                    if(studentName !== '[Trống]') {
-                         const studentObj = students.find(s => s.name === studentName);
-                         if(studentObj) arrangementMap[seat.dataset.seatId] = studentObj;
-                    }
-                });
-                updateStudentListByGroup(arrangementMap);
-            }
-
+            
              function updateStudentListByGroup(arrangementMap) {
-                const studentsByGroup = Object.fromEntries(Object.keys(groupToSeatsMap).map(name => [name, []]));
-                const groupOrder = ['N4', 'N1', 'N5', 'N2', 'N6', 'N3'];
+                 const studentsByGroup = Object.fromEntries(Object.keys(groupToSeatsMap).map(name => [name, []]));
+                 const groupOrder = ['N4', 'N1', 'N5', 'N2', 'N6', 'N3'];
 
-                for(const seatId in arrangementMap) {
-                    const student = arrangementMap[seatId];
-                    const groupName = seatToGroupMap[seatId];
-                    if (groupName && studentsByGroup[groupName]) {
-                        studentsByGroup[groupName].push({student, seatId: parseInt(seatId)});
-                    }
-                }
-                
-                studentListDiv.innerHTML = '';
-                let totalStudents = 0;
+                 for(const seatId in arrangementMap) {
+                     const student = arrangementMap[seatId];
+                     const groupName = seatToGroupMap[seatId];
+                     if (groupName && studentsByGroup[groupName]) {
+                         studentsByGroup[groupName].push({student, seatId: parseInt(seatId)});
+                     }
+                 }
+                 
+                 studentListDiv.innerHTML = '';
+                 let totalStudents = 0;
 
-                groupOrder.forEach(groupName => {
-                    const groupStudents = studentsByGroup[groupName];
-                    if (groupStudents.length > 0) {
-                        groupStudents.sort((a,b) => a.seatId - b.seatId);
+                 groupOrder.forEach(groupName => {
+                     const groupStudents = studentsByGroup[groupName];
+                     if (groupStudents.length > 0) {
+                         groupStudents.sort((a,b) => a.seatId - b.seatId);
 
-                        const groupTitle = document.createElement('h4');
-                        groupTitle.className = 'text-md font-semibold mt-3 mb-1 text-gray-800';
-                        groupTitle.textContent = `Nhóm ${groupName}`;
-                        studentListDiv.appendChild(groupTitle);
+                         const groupTitle = document.createElement('h4');
+                         groupTitle.className = 'text-md font-semibold mt-3 mb-1 text-gray-800';
+                         groupTitle.textContent = `Nhóm ${groupName}`;
+                         studentListDiv.appendChild(groupTitle);
 
-                        groupStudents.forEach(({student}) => {
-                            totalStudents++;
-                            const studentItem = document.createElement('div');
-                            studentItem.className = 'text-sm p-1.5 bg-white rounded-md mb-1.5 shadow-sm flex justify-between items-center';
-                            const keyScoreText = student.keyScore !== undefined ? student.keyScore.toFixed(2) : 'N/A';
-                            studentItem.innerHTML = `
-                                <span>${student.givenName}</span>
-                                <span class="font-mono text-xs text-gray-600">ĐTB: ${keyScoreText}</span>
-                            `;
-                            studentListDiv.appendChild(studentItem);
-                        });
-                    }
-                });
-                 studentCountSpan.textContent = totalStudents;
-                 studentListContainer.classList.remove('hidden');
-            }
+                         groupStudents.forEach(({student}) => {
+                             totalStudents++;
+                             const studentItem = document.createElement('div');
+                             studentItem.className = 'text-sm p-1.5 bg-white rounded-md mb-1.5 shadow-sm flex justify-between items-center';
+                             const keyScoreText = student.keyScore !== undefined ? student.keyScore.toFixed(2) : 'N/A';
+                             studentItem.innerHTML = `
+                                 <span>${student.givenName}</span>
+                                 <span class="font-mono text-xs text-gray-600">ĐTB: ${keyScoreText}</span>
+                             `;
+                             studentListDiv.appendChild(studentItem);
+                         });
+                     }
+                 });
+                  studentCountSpan.textContent = totalStudents;
+                  studentListContainer.classList.remove('hidden');
+             }
             
             function addDragListenersToStudent(element) {
                 element.addEventListener('dragstart', (e) => {
@@ -581,36 +568,36 @@
 
             function addDropListenersToSeats() {
                  document.querySelectorAll('.seat').forEach(seat => {
-                    seat.addEventListener('dragover', (e) => e.preventDefault());
-                    seat.addEventListener('dragleave', (e) => seat.classList.remove('over'));
-                    seat.addEventListener('dragenter', (e) => {
-                        e.preventDefault();
-                        seat.classList.add('over');
-                    });
-                    seat.addEventListener('drop', (e) => {
-                        e.preventDefault();
-                        seat.classList.remove('over');
-                        if (draggedElement && draggedElement !== seat) {
-                            const sourceNameSpan = draggedElement.querySelector('.student-name');
-                            const targetNameSpan = seat.querySelector('.student-name');
-                            
-                            [sourceNameSpan.textContent, targetNameSpan.textContent] = [targetNameSpan.textContent, sourceNameSpan.textContent];
-                            [draggedElement.title, seat.title] = [seat.title, draggedElement.title];
+                     seat.addEventListener('dragover', (e) => e.preventDefault());
+                     seat.addEventListener('dragleave', (e) => seat.classList.remove('over'));
+                     seat.addEventListener('dragenter', (e) => {
+                         e.preventDefault();
+                         seat.classList.add('over');
+                     });
+                     seat.addEventListener('drop', (e) => {
+                         e.preventDefault();
+                         seat.classList.remove('over');
+                         if (draggedElement && draggedElement !== seat) {
+                             const sourceNameSpan = draggedElement.querySelector('.student-name');
+                             const targetNameSpan = seat.querySelector('.student-name');
+                             
+                             [sourceNameSpan.textContent, targetNameSpan.textContent] = [targetNameSpan.textContent, sourceNameSpan.textContent];
+                             [draggedElement.title, seat.title] = [seat.title, draggedElement.title];
 
-                            [draggedElement, seat].forEach(el => {
-                                const nameSpan = el.querySelector('.student-name');
-								const isNowEmpty = nameSpan.textContent === '[Trống]';
-                                el.draggable = !isNowEmpty;
-                                el.classList.toggle('text-black', !isNowEmpty);
-                                el.classList.toggle('cursor-grab', !isNowEmpty);
-                                el.classList.toggle('text-gray-500', isNowEmpty);
-                                if(isNowEmpty) {
-                                    el.title = '';
-                                }
-                            });
-                        }
-                    });
-                });
+                             [draggedElement, seat].forEach(el => {
+                                 const nameSpan = el.querySelector('.student-name');
+                                 const isNowEmpty = nameSpan.textContent === '[Trống]';
+                                 el.draggable = !isNowEmpty;
+                                 el.classList.toggle('text-black', !isNowEmpty);
+                                 el.classList.toggle('cursor-grab', !isNowEmpty);
+                                 el.classList.toggle('text-gray-500', isNowEmpty);
+                                 if(isNowEmpty) {
+                                     el.title = '';
+                                 }
+                             });
+                         }
+                     });
+                 });
             }
 
             clearBtn.addEventListener('click', () => {
@@ -647,4 +634,3 @@
     </script>
 </body>
 </html>
-
