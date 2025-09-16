@@ -58,11 +58,11 @@
                 <div class="mb-6">
                     <label for="file-upload" class="block text-sm font-medium text-gray-700 mb-2">1. Tải lên Danh sách lớp (.xlsx)</label>
                     <input id="file-upload" type="file" accept=".xlsx, .xls, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" class="block w-full text-sm text-gray-500
-                        file:mr-4 file:py-2 file:px-4
-                        file:rounded-lg file:border-0
-                        file:text-sm file:font-semibold
-                        file:bg-blue-50 file:text-blue-700
-                        hover:file:bg-blue-100 cursor-pointer"/>
+                            file:mr-4 file:py-2 file:px-4
+                            file:rounded-lg file:border-0
+                            file:text-sm file:font-semibold
+                            file:bg-blue-50 file:text-blue-700
+                            hover:file:bg-blue-100 cursor-pointer"/>
                     <p class="text-xs text-gray-500 mt-1">Tệp phải có cột "Họ tên" và các môn điểm.</p>
                 </div>
 
@@ -87,8 +87,8 @@
                 <div id="subject-criteria-container" class="mb-6">
                      <label class="block text-sm font-medium text-gray-700 mb-2">Tiêu chí cho Sắp xếp thông minh</label>
                      <div id="subject-checkboxes" class="grid grid-cols-2 gap-2 p-3 border rounded-lg bg-gray-50">
-                        <!-- Checkboxes will be dynamically inserted here -->
-                        <p class="col-span-2 text-sm text-gray-500">Tải lên danh sách lớp để chọn môn.</p>
+                         <!-- Checkboxes will be dynamically inserted here -->
+                         <p class="col-span-2 text-sm text-gray-500">Tải lên danh sách lớp để chọn môn.</p>
                      </div>
                 </div>
 
@@ -305,15 +305,15 @@
                     headerRow.forEach((header, index) => {
                          const headerText = String(header).trim().toLowerCase();
                          if (index >= 5 && header && !ignoredHeaders.includes(headerText)) { 
-                           const cellValue = firstStudentRow[index] ? String(firstStudentRow[index]).trim().toLowerCase() : '';
-                           const numericScore = parseFloat(cellValue.replace(',', '.'));
-                           if (!isNaN(numericScore) || cellValue === 'đ') {
-                               detectedSubjects.push({ name: String(header), index: index });
-                           }
-                        }
-                        if (headerText.includes('giới')) {
-                            genderIndex = index;
-                        }
+                            const cellValue = firstStudentRow[index] ? String(firstStudentRow[index]).trim().toLowerCase() : '';
+                            const numericScore = parseFloat(cellValue.replace(',', '.'));
+                            if (!isNaN(numericScore) || cellValue === 'đ') {
+                                detectedSubjects.push({ name: String(header), index: index });
+                            }
+                         }
+                         if (headerText.includes('giới')) {
+                             genderIndex = index;
+                         }
                     });
 
                     if(detectedSubjects.length === 0) {
@@ -419,6 +419,11 @@
                 let arrangedStudents = [...students];
 
                 if (criteria === 'random') {
+                    // Sắp xếp ngẫu nhiên (thuật toán Fisher-Yates)
+                    for (let i = arrangedStudents.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [arrangedStudents[i], arrangedStudents[j]] = [arrangedStudents[j], arrangedStudents[i]];
+                    }
                     populateClassroomRandomly(arrangedStudents);
                 } else { 
                     const selectedSubjects = Array.from(subjectCheckboxesDiv.querySelectorAll('input:checked')).map(cb => cb.value);
@@ -428,15 +433,16 @@
                         let sum = 0;
                         let count = 0;
                         selectedSubjects.forEach(subjectName => {
-                            if (student.scores[subjectName] !== null) {
-                                sum += student.scores[subjectName];
+                            if (student.scores[subjectName] !== null && !isNaN(student.scores[subjectName])) {
+                                sum += parseFloat(student.scores[subjectName]);
                                 count++;
                             }
                         });
                         student.keyScore = count > 0 ? sum / count : 0;
                     });
                     
-                    arrangedStudents.sort((a, b) => b.keyScore - a.keyScore);
+                    // Sắp xếp học sinh theo điểm tăng dần (học sinh yếu hơn ngồi trước)
+                    arrangedStudents.sort((a, b) => a.keyScore - b.keyScore);
                     
                     const arrangementMap = customOrderArrangement(arrangedStudents);
                     populateClassroomFromMap(arrangementMap);
@@ -448,28 +454,36 @@
             function customOrderArrangement(sortedStudents) {
                 const finalArrangementMap = {};
                 
-                const seatIdMap = {};
-                for(let r=0; r<10; r++) {
-                    for(let c=0; c<4; c++) {
-                        const seatNum = r*4 + c + 1;
-                        const main_col = Math.floor(c/2);
-                        const side = c % 2;
-                        const seatId = main_col * 20 + r * 2 + side;
-                        seatIdMap[seatNum] = seatId;
-                    }
-                }
+                // Tạo một bản đồ ngược từ số hiệu nhóm (ví dụ: "4.6") sang seatId
+                const groupNumberToSeatIdMap = Object.fromEntries(
+                    Object.entries(seatIdToGroupNumber).map(([seatId, groupNum]) => [groupNum, seatId])
+                );
 
-                const customSeatNumbers = [
-                    1, 2, 3, 4, 13, 14, 15, 16, 25, 26, 27, 28, 37, 38, 39, 40,
-                    5, 6, 7, 8, 17, 18, 19, 20, 29, 30, 31, 32, 9, 10, 11, 12,
-                    21, 22, 23, 24, 33, 34, 35, 36
+                // Thứ tự sắp xếp tùy chỉnh mới theo yêu cầu
+                const customGroupNumberOrder = [
+                    '4.6', '1.6', '5.6', '2.6', '6.8', '3.8', '3.1', '6.1', '5.1', '2.1', '1.1', '4.1', 
+                    '4.5', '1.5', '5.5', '2.5', '6.7', '3.7', '3.2', '6.2', '2.2', '5.2', '4.2', '1.2', 
+                    '4.4', '1.4', '5.4', '2.4', '6.6', '3.6', '3.3', '6.3', '5.3', '2.3', '1.3', '4.3'
                 ];
 
-                const customSeatOrder = customSeatNumbers.map(num => seatIdMap[num]);
+                // Chuyển đổi thứ tự số hiệu nhóm sang thứ tự seat ID
+                let customSeatOrder = customGroupNumberOrder
+                    .map(groupNum => groupNumberToSeatIdMap[groupNum])
+                    .filter(id => id !== undefined);
+                
+                // Lấy tất cả các seat ID
+                const allSeatIds = Object.keys(seatIdToAbsoluteNumber);
+                
+                // Tìm các ghế còn lại và thêm chúng vào cuối danh sách
+                const arrangedSeatIds = new Set(customSeatOrder);
+                const remainingSeatIds = allSeatIds.filter(id => !arrangedSeatIds.has(id));
+                
+                // Kết hợp thứ tự tùy chỉnh với các ghế còn lại
+                const finalSeatOrder = [...customSeatOrder, ...remainingSeatIds];
 
                 sortedStudents.forEach((student, index) => {
-                    if (index < customSeatOrder.length) {
-                        const seatId = customSeatOrder[index];
+                    if (index < finalSeatOrder.length) {
+                        const seatId = finalSeatOrder[index];
                         finalArrangementMap[seatId] = student;
                     }
                 });
@@ -599,7 +613,7 @@
 
                             [draggedElement, seat].forEach(el => {
                                 const nameSpan = el.querySelector('.student-name');
-								const isNowEmpty = nameSpan.textContent === '[Trống]';
+                                const isNowEmpty = nameSpan.textContent === '[Trống]';
                                 el.draggable = !isNowEmpty;
                                 el.classList.toggle('text-black', !isNowEmpty);
                                 el.classList.toggle('cursor-grab', !isNowEmpty);
